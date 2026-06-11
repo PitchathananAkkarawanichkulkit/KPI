@@ -1,0 +1,1669 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>โปรแกรมประเมิน KPI สสว. (KPI Calculator)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Noto Sans Thai -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- PDF Export Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+      :root {
+        --brand: #1d4ed8;
+        --brand-soft: #dbeafe;
+        --ink: #0f172a;
+        --muted: #64748b;
+        --panel: rgba(255, 255, 255, 0.92);
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-family: "Noto Sans Thai", sans-serif;
+        background:
+          linear-gradient(
+            180deg,
+            rgba(241, 245, 249, 0.8),
+            rgba(248, 250, 252, 1) 34rem
+          ),
+          #f8fafc;
+      }
+
+      .fade-in {
+        animation: fadeIn 0.3s ease-in-out;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .surface-panel {
+        background: var(--panel);
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.07);
+        backdrop-filter: blur(18px);
+      }
+
+      .soft-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.06);
+      }
+
+      .nav-tab {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        min-height: 2.5rem;
+        border-radius: 0.625rem;
+        padding: 0.625rem 0.9rem;
+        color: #64748b;
+        font-size: 0.875rem;
+        font-weight: 700;
+        transition: all 180ms ease;
+        white-space: nowrap;
+      }
+
+      .nav-tab:hover {
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.7);
+      }
+
+      .nav-tab-active {
+        color: #1d4ed8;
+        background: #ffffff;
+        box-shadow: 0 8px 22px rgba(37, 99, 235, 0.13);
+      }
+
+      .form-control {
+        width: 100%;
+        margin-top: 0.35rem;
+        border-radius: 0.75rem;
+        border: 1px solid #cbd5e1;
+        background: #f8fafc;
+        padding: 0.72rem 0.82rem;
+        font-size: 0.92rem;
+        color: #0f172a;
+        outline: none;
+        transition:
+          border-color 150ms ease,
+          box-shadow 150ms ease,
+          background 150ms ease;
+      }
+
+      .form-control:focus {
+        border-color: #2563eb;
+        background: #ffffff;
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+      }
+
+      .mini-label {
+        color: #64748b;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .mini-label.text-rose-600 {
+        color: #e11d48;
+      }
+
+      .mini-label.text-emerald-700 {
+        color: #047857;
+      }
+
+      .progress-track {
+        height: 0.5rem;
+        overflow: hidden;
+        border-radius: 999px;
+        background: #e2e8f0;
+      }
+
+      .progress-fill {
+        height: 100%;
+        border-radius: inherit;
+        transition: width 220ms ease;
+      }
+
+      .score-low {
+        background: linear-gradient(90deg, #fb7185, #f97316);
+      }
+
+      .score-mid {
+        background: linear-gradient(90deg, #f59e0b, #22c55e);
+      }
+
+      .score-good {
+        background: linear-gradient(90deg, #14b8a6, #2563eb);
+      }
+
+      .score-muted {
+        background: #cbd5e1;
+      }
+
+      .score-ring {
+        background:
+          radial-gradient(circle at center, #ffffff 58%, transparent 59%),
+          conic-gradient(
+            var(--ring-color, #cbd5e1) var(--ring-value, 0%),
+            #e2e8f0 0
+          );
+      }
+
+      .chart-grid {
+        background-image: linear-gradient(
+          to top,
+          rgba(148, 163, 184, 0.22) 1px,
+          transparent 1px
+        );
+        background-size: 100% 25%;
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+    </style>
+  </head>
+
+  <body class="min-h-screen flex flex-col text-slate-800">
+    <!-- Navbar -->
+    <nav
+      class="sticky top-0 z-50 border-b border-white/70 bg-white/85 shadow-sm backdrop-blur-xl"
+    >
+      <div
+        class="max-w-7xl mx-auto px-4 py-3 md:h-20 flex flex-col gap-3 md:flex-row md:items-center md:justify-between"
+      >
+        <div class="flex w-full min-w-0 items-center gap-3 md:w-auto">
+          <div
+            class="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-sm"
+          >
+            <img
+              src="images/OSMEP_logo.jpg"
+              alt="OSMEP"
+              class="h-full w-full object-contain"
+            />
+          </div>
+          <div class="min-w-0">
+            <h1
+              class="text-base font-black leading-tight text-slate-900 md:text-xl"
+            >
+              ผลการประเมิน KPI เจ้าหน้าที่ Contact Center สสว.
+            </h1>
+            <p class="text-xs font-medium text-slate-500 md:text-sm">
+              ระบบประเมินผลการปฏิบัติงานรายบุคคลและภาพรวมทีม
+            </p>
+          </div>
+        </div>
+
+        <div class="flex w-full rounded-xl bg-slate-100 p-1 md:w-auto">
+          <button
+            onclick="switchView('calculator')"
+            id="btn-calculator"
+            class="nav-tab nav-tab-active flex-1 md:flex-none"
+          >
+            <!-- Icon Calculator -->
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect width="16" height="20" x="4" y="2" rx="2" />
+              <line x1="8" x2="16" y1="6" y2="6" />
+              <line x1="16" x2="16" y1="14" y2="18" />
+              <path d="M16 10h.01" />
+              <path d="M12 10h.01" />
+              <path d="M8 10h.01" />
+              <path d="M12 14h.01" />
+              <path d="M8 14h.01" />
+              <path d="M12 18h.01" />
+              <path d="M8 18h.01" />
+            </svg>
+            บันทึกคะแนน
+          </button>
+          <button
+            onclick="switchView('dashboard')"
+            id="btn-dashboard"
+            class="nav-tab flex-1 md:flex-none"
+          >
+            <!-- Icon LayoutGrid -->
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect width="7" height="7" x="3" y="3" rx="1" />
+              <rect width="7" height="7" x="14" y="3" rx="1" />
+              <rect width="7" height="7" x="14" y="14" rx="1" />
+              <rect width="7" height="7" x="3" y="14" rx="1" />
+            </svg>
+            รายงานภาพรวม
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto w-full flex-grow p-4 md:p-6">
+      <section
+        class="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+      >
+        <div class="grid gap-0 md:grid-cols-[1.5fr_1fr]">
+          <div class="p-5 md:p-6">
+            <p
+              class="text-xs font-bold uppercase tracking-[0.18em] text-blue-600"
+            >
+              KPI Contact Center
+            </p>
+            <h2 class="mt-2 text-2xl font-black text-slate-950 md:text-3xl">
+              โปรแกรมคำนวณและติดตามผลคะแนน KPI
+            </h2>
+            <p class="mt-2 max-w-2xl text-sm font-medium text-slate-500">
+              รายงานประเมินผลการปฏิบัติงานเจ้าหน้าที่ ประจำทีม Contact Center
+            </p>
+          </div>
+          <div
+            class="grid grid-cols-3 divide-x divide-slate-200 border-t border-slate-200 bg-slate-50 md:border-l md:border-t-0"
+          >
+            <div class="p-4 text-center">
+              <div
+                id="agent-count-display"
+                class="text-2xl font-black text-slate-900"
+              >
+                0
+              </div>
+              <div class="text-xs font-bold text-slate-500">เจ้าหน้าที่</div>
+            </div>
+            <div class="p-4 text-center">
+              <div class="text-2xl font-black text-blue-600">100</div>
+              <div class="text-xs font-bold text-slate-500">คะแนนเต็ม</div>
+            </div>
+            <div class="p-4 text-center">
+              <div class="text-2xl font-black text-teal-600">Auto</div>
+              <div class="text-xs font-bold text-slate-500">Save</div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- View: Calculator -->
+      <div
+        id="view-calculator"
+        class="grid grid-cols-1 lg:grid-cols-3 gap-6 fade-in"
+      >
+        <!-- Left Column -->
+        <div class="lg:col-span-2 space-y-6">
+          <!-- Agent Selector -->
+          <div class="surface-panel rounded-2xl p-5 md:p-6">
+            <div class="flex items-center gap-2 mb-4">
+              <svg
+                class="text-blue-600"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <h2 class="text-lg font-semibold text-gray-700">
+                ข้อมูลเจ้าหน้าที่ Contact Center
+              </h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-600 mb-1"
+                  >เลือกพนักงาน</label
+                >
+                <select
+                  id="agent-select"
+                  onchange="changeAgent()"
+                  class="form-control"
+                >
+                  <!-- Options populated by JS -->
+                </select>
+              </div>
+              <div
+                id="agent-info"
+                class="rounded-xl border border-blue-100 bg-blue-50/70 p-4 text-sm grid grid-cols-2 gap-3"
+              >
+                <!-- Info populated by JS -->
+              </div>
+            </div>
+          </div>
+
+          <!-- KPI Inputs -->
+          <div class="surface-panel rounded-2xl p-5 md:p-6">
+            <div class="flex items-center gap-2 mb-6 border-b pb-4">
+              <svg
+                class="text-blue-600"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+                <path
+                  d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+                />
+                <path d="m9 14 2 2 4-4" />
+              </svg>
+              <h2 class="text-lg font-semibold text-gray-700">
+                กรอกข้อมูลผลการทำงาน
+              </h2>
+            </div>
+
+            <div id="kpi-inputs-container" class="space-y-4">
+              <!-- KPI Cards populated by JS -->
+            </div>
+
+            <!-- KPI 6 Auto -->
+            <div
+              class="soft-card mt-4 overflow-hidden rounded-2xl border-purple-200 bg-purple-50/70 p-4 relative"
+            >
+              <div class="flex justify-between items-start mb-2 relative z-10">
+                <div class="flex items-center gap-2">
+                  <h3 class="font-semibold text-gray-800">6. จิตพิสัย</h3>
+                  <svg
+                    class="text-purple-500"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path
+                      d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"
+                    />
+                  </svg>
+                </div>
+                <span
+                  class="text-xs font-bold px-2 py-1 bg-white/80 rounded text-purple-700 border border-purple-100"
+                  >เต็ม 20</span
+                >
+              </div>
+              <div class="relative z-10">
+                <div class="text-xs text-gray-500 mb-2">
+                  คำนวณอัตโนมัติจากผลรวมคะแนน KPI ข้อ 1-5
+                </div>
+                <div
+                  class="flex flex-col gap-3 rounded-xl border border-purple-100 bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div class="text-xs text-gray-400">
+                    (คะแนนรวมข้อ 1-5 / 80) × 20
+                  </div>
+                  <div class="text-xl font-bold text-purple-600">
+                    <span id="kpi6-score-display">0.00</span>
+                    <span class="text-xs font-normal text-gray-400">คะแนน</span>
+                  </div>
+                </div>
+              </div>
+              <div
+                class="absolute top-0 right-0 -mt-2 -mr-2 w-16 h-16 bg-purple-100 rounded-full blur-xl opacity-50"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Summary Sticky -->
+        <div class="lg:col-span-1">
+          <div class="surface-panel sticky top-28 rounded-2xl p-5 md:p-6">
+            <div class="flex items-center gap-2 mb-4 pb-4 border-b">
+              <svg
+                class="text-blue-600"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M3 3v18h18" />
+                <path d="M18 17V9" />
+                <path d="M13 17V5" />
+                <path d="M8 17v-3" />
+              </svg>
+              <h2 class="text-lg font-bold text-gray-800">สรุปผลรายบุคคล</h2>
+            </div>
+            <div class="py-4 text-center">
+              <span
+                class="block text-gray-500 text-sm mb-1 uppercase tracking-wide"
+                >คะแนนรวม</span
+              >
+              <div class="flex justify-center items-baseline gap-2">
+                <span
+                  id="total-score-display"
+                  class="text-5xl font-black text-gray-300 md:text-6xl"
+                  >0.00</span
+                >
+                <span class="text-gray-400 text-lg font-medium">/ 100</span>
+              </div>
+            </div>
+            <div
+              id="grade-badge"
+              class="mt-4 rounded-xl border p-4 text-center text-gray-400 bg-gray-50 border-gray-200"
+            >
+              <span class="block text-xs font-bold opacity-70 uppercase mb-1"
+                >ระดับคะแนน (Grade)</span
+              >
+              <span id="grade-display" class="text-2xl font-bold">-</span>
+            </div>
+            <div class="mt-5">
+              <div
+                class="mb-2 flex items-center justify-between text-xs font-bold text-slate-500"
+              >
+                <span>ความคืบหน้าคะแนน</span>
+                <span id="score-percent-display">0%</span>
+              </div>
+              <div class="progress-track">
+                <div
+                  id="total-progress-fill"
+                  class="progress-fill score-muted"
+                  style="width: 0%"
+                ></div>
+              </div>
+            </div>
+            <div
+              class="mt-4 flex items-center justify-center gap-2 text-xs text-gray-400"
+            >
+              <div
+                class="w-2 h-2 bg-green-500 rounded-full animate-pulse"
+              ></div>
+              บันทึกอัตโนมัติ (Auto-Save)
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- View: Dashboard -->
+      <div id="view-dashboard" class="hidden fade-in">
+        <div
+          class="surface-panel mb-6 flex flex-col gap-4 rounded-2xl p-5 md:flex-row md:items-center md:justify-between md:p-6"
+          id="dashboard-header"
+        >
+          <div>
+            <h2
+              class="flex items-center gap-2 text-2xl font-black text-slate-900"
+            >
+              <svg
+                class="text-blue-600"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect width="7" height="7" x="3" y="3" rx="1" />
+                <rect width="7" height="7" x="14" y="3" rx="1" />
+                <rect width="7" height="7" x="14" y="14" rx="1" />
+                <rect width="7" height="7" x="3" y="14" rx="1" />
+              </svg>
+              รายงานภาพรวมเจ้าหน้าที่ Contact Center
+            </h2>
+            <p class="text-gray-500 text-sm">
+              สรุปคะแนน KPI และรายละเอียดผลการปฏิบัติงานของทีม
+            </p>
+          </div>
+          <div
+            class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row"
+            id="dashboard-actions"
+          >
+            <button
+              onclick="exportCSV()"
+              class="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-700"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4" />
+                <path d="M14 2v6h6" />
+                <path d="M8 13h2" />
+                <path d="M8 17h2" />
+                <path d="M14 13h2" />
+                <path d="M14 17h2" />
+              </svg>
+              Export Report (.CSV)
+            </button>
+            <button
+              onclick="exportPDF()"
+              class="flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-rose-700"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                ></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+              Export Report (.PDF)
+            </button>
+          </div>
+        </div>
+
+        <!-- Team Stats Cards -->
+        <div
+          id="team-stats-container"
+          class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3"
+        >
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Chart Section -->
+        <div class="surface-panel mb-6 rounded-2xl p-5 md:p-6">
+          <h3
+            class="mb-6 flex items-center gap-2 text-lg font-black text-slate-900"
+          >
+            <svg
+              class="text-blue-600"
+              xmlns="http://www.w3.org/2000/svg"
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+              <polyline points="16 7 22 7 22 13" />
+            </svg>
+            กราฟเปรียบเทียบคะแนนรวม (Total Score Comparison)
+          </h3>
+
+          <div
+            id="chart-container"
+            class="chart-grid flex h-80 items-end justify-between gap-3 overflow-x-auto px-2 pb-2 pt-4"
+          >
+            <!-- Bars will be generated by JS -->
+          </div>
+
+          <!-- Legend -->
+          <div
+            class="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 border-t border-slate-200 pt-4 text-xs font-medium text-slate-600"
+          >
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-3 bg-rose-400 rounded-sm"></div>
+              1. Abandoned Call (10 คะแนน)
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-3 bg-orange-400 rounded-sm"></div>
+              2. Unassigned (10 คะแนน)
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-3 bg-blue-400 rounded-sm"></div>
+              3. คะแนนความพึงพอใจของผู้ใช้บริการ (20 คะแนน)
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-3 bg-cyan-400 rounded-sm"></div>
+              4. ปัญหาที่พบ, สาเหตุ, Status และปิดงาน (20 คะแนน)
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-3 bg-emerald-400 rounded-sm"></div>
+              5. การรับงานทั้งหมด (20 คะแนน)
+            </div>
+            <div class="flex items-center gap-1.5">
+              <div class="w-3 h-3 bg-purple-400 rounded-sm"></div>
+              6. จิตพิสัย (20 คะแนน)
+            </div>
+          </div>
+        </div>
+
+        <!-- Table Section -->
+        <div class="surface-panel mb-10 overflow-hidden rounded-2xl">
+          <div
+            class="flex flex-col gap-1 border-b border-slate-200 bg-slate-50/80 p-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <h3 class="font-black text-slate-800">รายละเอียดคะแนนรายบุคคล</h3>
+            <span class="text-xs text-gray-500"
+              >*แสดงคะแนน และ (ผลงานจริง) ในวงเล็บ</span
+            >
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[980px] text-left text-sm">
+              <thead
+                class="border-b bg-slate-50 text-xs uppercase text-slate-700"
+              >
+                <tr>
+                  <th class="px-6 py-4 font-bold">พนักงาน</th>
+                  <th class="px-4 py-4 text-center">
+                    ข้อ 1<br /><span
+                      class="text-[10px] text-gray-400 font-normal"
+                      >Abandoned Call</span
+                    >
+                  </th>
+                  <th class="px-4 py-4 text-center">
+                    ข้อ 2<br /><span
+                      class="text-[10px] text-gray-400 font-normal"
+                      >Unassigned</span
+                    >
+                  </th>
+                  <th class="px-4 py-4 text-center">
+                    ข้อ 3<br /><span
+                      class="text-[10px] text-gray-400 font-normal"
+                      >ความพึงพอใจของผู้ใช้บริการ</span
+                    >
+                  </th>
+                  <th class="px-4 py-4 text-center">
+                    ข้อ 4<br /><span
+                      class="text-[10px] text-gray-400 font-normal"
+                      >ปัญหาที่พบ, สาเหตุ, Status และปิดงาน</span
+                    >
+                  </th>
+                  <th class="px-4 py-4 text-center">
+                    ข้อ 5<br /><span
+                      class="text-[10px] text-gray-400 font-normal"
+                      >การรับงานทั้งหมด</span
+                    >
+                  </th>
+                  <th class="px-4 py-4 text-center bg-purple-50">
+                    ข้อ 6<br /><span
+                      class="text-[10px] text-purple-400 font-normal"
+                      >จิตพิสัย</span
+                    >
+                  </th>
+                  <th class="px-6 py-4 text-center font-bold bg-gray-100">
+                    รวม<br /><span class="text-[10px] text-gray-500 font-normal"
+                      >Total</span
+                    >
+                  </th>
+                  <th class="px-6 py-4 text-center">เกณฑ์</th>
+                </tr>
+              </thead>
+              <tbody id="dashboard-table-body" class="divide-y divide-gray-100">
+                <!-- Table rows populated by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- JavaScript Logic -->
+    <script>
+      // Data Structure
+      const agents = [
+        {
+          id: "1005",
+          name: "น.ส. พิญาดา อินทร์จันทร์",
+          nick: "ลี่",
+          code: "Agent01",
+        },
+        {
+          id: "1004",
+          name: "น.ส. มินตรา มอนเซลล์",
+          nick: "มิน",
+          code: "Agent02",
+        },
+        {
+          id: "1003",
+          name: "น.ส. อาทิตยา ศรีคำเวียง",
+          nick: "น้อง",
+          code: "Agent03",
+        },
+        {
+          id: "1002",
+          name: "น.ส. สุธาสินี อินผ่อง",
+          nick: "เชอ",
+          code: "Agent04",
+        },
+        {
+          id: "1001",
+          name: "น.ส. ศศิธร ทอนโพธิ์แก้ว",
+          nick: "บังเอิญ",
+          code: "Agent05",
+        },
+        { id: "1006", 
+          name: "น.ส. ถิรญา สมมิตร", 
+          nick: "ฟ้า", 
+          code: "Agent06" },
+        
+      ];
+
+      // Default Input Structure
+      const defaultInputs = {
+        kpi1_total: 0,
+        kpi1_abandoned: 0,
+        kpi2_total: 0,
+        kpi2_unassigned: 0,
+        kpi3_topbox: 0,
+        kpi3_total: 0,
+        kpi4_total: 0,
+        kpi4_closed: 0,
+        kpi5_total: 0,
+        kpi5_accepted: 0,
+      };
+
+      // State
+      let allData = {};
+      let selectedAgentId = agents[0].id;
+
+      // Initialize Data
+      function initData() {
+        const agentCountDisplay = document.getElementById(
+          "agent-count-display",
+        );
+        if (agentCountDisplay) agentCountDisplay.innerText = agents.length;
+
+        // Check LocalStorage or Init Defaults
+        const savedData = localStorage.getItem("kpiData_v2");
+        if (savedData) {
+          try {
+            allData = JSON.parse(savedData);
+          } catch (error) {
+            console.warn("Cannot parse saved KPI data, starting fresh.", error);
+            allData = {};
+          }
+        } else {
+          allData = {};
+        }
+
+        // Ensure all agents have data structure (handles new agents added to code)
+        agents.forEach((agent) => {
+          if (!allData[agent.id]) {
+            allData[agent.id] = { ...defaultInputs };
+          }
+        });
+
+        renderAgentSelect();
+        renderCalculator();
+      }
+
+      // --- Core Calculation Logic ---
+      function calculateScores(inputs) {
+        let scores = {
+          kpi1: 0,
+          kpi2: 0,
+          kpi3: 0,
+          kpi4: 0,
+          kpi5: 0,
+          kpi6: 0,
+          total: 0,
+          level: "",
+          colorClass: "",
+          textClass: "",
+        };
+
+        // KPI 1: Abandoned <= 5% (10 pts)
+        if (inputs.kpi1_total > 0) {
+          const successRate = Math.max(
+            0,
+            1 - inputs.kpi1_abandoned / inputs.kpi1_total,
+          );
+          scores.kpi1 = successRate * 10;
+        }
+
+        // KPI 2: Unassigned <= 10% (10 pts)
+        if (inputs.kpi2_total > 0) {
+          const successRate = Math.max(
+            0,
+            1 - inputs.kpi2_unassigned / inputs.kpi2_total,
+          );
+          scores.kpi2 = successRate * 10;
+        }
+
+        // KPI 3: CSAT >= 75% (20 pts)
+        if (inputs.kpi3_total > 0) {
+          const successRate = inputs.kpi3_topbox / inputs.kpi3_total;
+          scores.kpi3 = Math.min(1, Math.max(0, successRate)) * 20;
+        }
+
+        // KPI 4: Closed >= 85% (20 pts)
+        if (inputs.kpi4_total > 0) {
+          const successRate = inputs.kpi4_closed / inputs.kpi4_total;
+          scores.kpi4 = Math.min(1, Math.max(0, successRate)) * 20;
+        }
+
+        // KPI 5: Accepted >= Target (Avg Pool) (20 pts)
+        if (inputs.kpi5_total > 0) {
+          const targetPerAgent = inputs.kpi5_total / 6;
+          const successRate =
+            targetPerAgent > 0 ? inputs.kpi5_accepted / targetPerAgent : 0;
+          scores.kpi5 = Math.min(1, Math.max(0, successRate)) * 20;
+        }
+
+        // KPI 6: Auto from Sum 1-5
+        const totalScore1to5 =
+          scores.kpi1 + scores.kpi2 + scores.kpi3 + scores.kpi4 + scores.kpi5;
+        scores.kpi6 = (totalScore1to5 / 80) * 20;
+
+        // Total
+        scores.total = totalScore1to5 + scores.kpi6;
+
+        // Grade
+        if (scores.total >= 70) {
+          scores.level = "สูง (High)";
+          scores.colorClass = "bg-green-50 border-green-200";
+          scores.textClass = "text-green-600";
+        } else if (scores.total >= 50) {
+          scores.level = "กลาง (Medium)";
+          scores.colorClass = "bg-yellow-50 border-yellow-200";
+          scores.textClass = "text-yellow-600";
+        } else {
+          scores.level = "ต่ำ (Low)";
+          scores.colorClass = "bg-red-50 border-red-200";
+          scores.textClass = "text-red-600";
+        }
+
+        return scores;
+      }
+
+      // --- View Logic ---
+
+      function switchView(mode) {
+        const calcView = document.getElementById("view-calculator");
+        const dashView = document.getElementById("view-dashboard");
+        const btnCalc = document.getElementById("btn-calculator");
+        const btnDash = document.getElementById("btn-dashboard");
+
+        if (mode === "calculator") {
+          calcView.classList.remove("hidden");
+          dashView.classList.add("hidden");
+
+          btnCalc.classList.add("nav-tab-active");
+          btnDash.classList.remove("nav-tab-active");
+
+          renderCalculator(); // Refresh inputs just in case
+        } else {
+          calcView.classList.add("hidden");
+          dashView.classList.remove("hidden");
+
+          btnDash.classList.add("nav-tab-active");
+          btnCalc.classList.remove("nav-tab-active");
+
+          renderDashboard();
+        }
+
+        if (window.location.hash !== `#${mode}`) {
+          history.replaceState(null, "", `#${mode}`);
+        }
+      }
+
+      function renderAgentSelect() {
+        const select = document.getElementById("agent-select");
+        select.innerHTML = agents
+          .map((a) => `<option value="${a.id}">${a.code} - ${a.name}</option>`)
+          .join("");
+        select.value = selectedAgentId;
+        updateAgentInfoDisplay();
+      }
+
+      function changeAgent() {
+        selectedAgentId = document.getElementById("agent-select").value;
+        updateAgentInfoDisplay();
+        renderCalculator();
+      }
+
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function getScoreMeta(score, weight) {
+        const ratio = weight > 0 ? clamp((score / weight) * 100, 0, 100) : 0;
+
+        if (ratio >= 85) {
+          return {
+            ratio,
+            label: "ดีมาก",
+            color: "#0f766e",
+            fillClass: "score-good",
+            ringColor: "#14b8a6",
+          };
+        }
+
+        if (ratio >= 60) {
+          return {
+            ratio,
+            label: "ใกล้เป้าหมาย",
+            color: "#b45309",
+            fillClass: "score-mid",
+            ringColor: "#f59e0b",
+          };
+        }
+
+        if (ratio > 0) {
+          return {
+            ratio,
+            label: "ต้องติดตาม",
+            color: "#be123c",
+            fillClass: "score-low",
+            ringColor: "#fb7185",
+          };
+        }
+
+        return {
+          ratio,
+          label: "รอข้อมูล",
+          color: "#64748b",
+          fillClass: "score-muted",
+          ringColor: "#cbd5e1",
+        };
+      }
+
+      function getKpiActuals(inputs) {
+        return {
+          act1:
+            inputs.kpi1_total > 0
+              ? ((inputs.kpi1_abandoned / inputs.kpi1_total) * 100).toFixed(2)
+              : "0.00",
+          act2:
+            inputs.kpi2_total > 0
+              ? ((inputs.kpi2_unassigned / inputs.kpi2_total) * 100).toFixed(2)
+              : "0.00",
+          act3:
+            inputs.kpi3_total > 0
+              ? ((inputs.kpi3_topbox / inputs.kpi3_total) * 100).toFixed(2)
+              : "0.00",
+          act4:
+            inputs.kpi4_total > 0
+              ? ((inputs.kpi4_closed / inputs.kpi4_total) * 100).toFixed(2)
+              : "0.00",
+          target5: (inputs.kpi5_total / 6).toFixed(0),
+        };
+      }
+
+      function updateAgentInfoDisplay() {
+        const agent = agents.find((a) => a.id === selectedAgentId);
+        const infoDiv = document.getElementById("agent-info");
+        infoDiv.innerHTML = `
+                <div><span class="text-blue-700/70 text-xs font-bold block">ชื่อเล่น</span> <span class="font-black text-slate-900">${agent.nick}</span></div>
+                <div><span class="text-blue-700/70 text-xs font-bold block">รหัส</span> <span class="font-black text-slate-900">${agent.id}</span></div>
+                <div class="col-span-2"><span class="text-blue-700/70 text-xs font-bold block">Code</span> <span class="font-bold text-slate-700">${agent.code}</span></div>
+            `;
+      }
+
+      function handleInput(key, value) {
+        const floatVal = parseFloat(value) || 0;
+        allData[selectedAgentId][key] = floatVal;
+
+        // Save
+        localStorage.setItem("kpiData_v2", JSON.stringify(allData));
+
+        updateKpiLiveDisplay();
+        updateSummary();
+      }
+
+      function updateKpiLiveDisplay() {
+        const inputs = allData[selectedAgentId];
+        const scores = calculateScores(inputs);
+        const actuals = getKpiActuals(inputs);
+        const rows = [
+          ["kpi1", scores.kpi1, 10, actuals.act1],
+          ["kpi2", scores.kpi2, 10, actuals.act2],
+          ["kpi3", scores.kpi3, 20, actuals.act3],
+          ["kpi4", scores.kpi4, 20, actuals.act4],
+          ["kpi5", scores.kpi5, 20, inputs.kpi5_accepted || 0],
+        ];
+
+        rows.forEach(([key, score, weight, actual]) => {
+          const meta = getScoreMeta(score, weight);
+          const actualEl = document.getElementById(`${key}-actual`);
+          const scoreEl = document.getElementById(`${key}-score`);
+          const statusEl = document.getElementById(`${key}-status`);
+          const progressEl = document.getElementById(`${key}-progress`);
+          const ringEl = document.getElementById(`${key}-ring`);
+          const ringLabelEl = document.getElementById(`${key}-ring-label`);
+
+          if (actualEl) actualEl.innerText = actual;
+          if (scoreEl) scoreEl.innerText = score.toFixed(2);
+          if (statusEl) {
+            statusEl.innerText = meta.label;
+            statusEl.style.color = meta.color;
+          }
+          if (progressEl) {
+            progressEl.style.width = `${meta.ratio}%`;
+            progressEl.className = `progress-fill ${meta.fillClass}`;
+          }
+          if (ringEl) {
+            ringEl.style.setProperty("--ring-value", `${meta.ratio}%`);
+            ringEl.style.setProperty("--ring-color", meta.ringColor);
+          }
+          if (ringLabelEl) ringLabelEl.innerText = `${Math.round(meta.ratio)}%`;
+        });
+
+        const kpi5SubText = document.getElementById("kpi5-subtext");
+        if (kpi5SubText) {
+          kpi5SubText.innerText = `เกณฑ์: งานทั้งหมด / 6 = ${actuals.target5} งาน/คน`;
+        }
+      }
+
+      // --- Rendering Calculator ---
+
+      function renderCalculator() {
+        renderCalculatorInputs(true);
+        updateSummary();
+      }
+
+      function renderCalculatorInputs(fullRender) {
+        if (!fullRender) return;
+
+        const inputs = allData[selectedAgentId];
+        const scores = calculateScores(inputs);
+        const container = document.getElementById("kpi-inputs-container");
+
+        // Helper to generate KPI Card HTML
+        const kpiCard = (
+          key,
+          title,
+          weight,
+          score,
+          actual,
+          unit,
+          fields,
+          targetText,
+          subText = "",
+        ) => {
+          const percentIcon = `<svg class="inline mr-1" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" x2="5" y1="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>`;
+          const meta = getScoreMeta(score, weight);
+
+          return `
+                <div class="soft-card overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
+                    <div class="p-4">
+                      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div class="min-w-0">
+                            <div class="mb-2 flex flex-wrap items-center gap-2">
+                              <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-600">เต็ม ${weight}</span>
+                              <span id="${key}-status" class="text-xs font-black" style="color:${meta.color}">${meta.label}</span>
+                            </div>
+                            <h3 class="text-sm font-black leading-relaxed text-slate-900 md:text-base">${title}</h3>
+                            <span class="mt-1 block text-xs font-bold text-slate-500">เป้าหมาย: ${targetText}</span>
+                            ${subText ? `<span id="${key}-subtext" class="mt-0.5 block text-xs font-bold text-blue-600">${subText}</span>` : ""}
+                        </div>
+                        <div id="${key}-ring" class="score-ring grid h-16 w-16 shrink-0 place-items-center rounded-full" style="--ring-value:${meta.ratio}%; --ring-color:${meta.ringColor}">
+                          <span id="${key}-ring-label" class="text-sm font-black text-slate-900">${Math.round(meta.ratio)}%</span>
+                        </div>
+                      </div>
+                      <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          ${fields}
+                      </div>
+                      <div class="mt-4">
+                        <div class="progress-track">
+                          <div id="${key}-progress" class="progress-fill ${meta.fillClass}" style="width:${meta.ratio}%"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="flex flex-col gap-2 border-t border-slate-100 bg-slate-50/80 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="text-xs font-bold text-slate-600">
+                           ผลงานจริง: <span id="${key}-actual" class="text-slate-950">${actual}</span> ${unit}
+                        </div>
+                        <div class="flex items-center gap-2">
+                             <span class="flex items-center text-sm font-black text-blue-600">
+                                ${percentIcon} ได้ <span id="${key}-score" class="mx-1">${score.toFixed(2)}</span> คะแนน
+                             </span>
+                        </div>
+                    </div>
+                </div>`;
+        };
+
+        // Calculate actuals for display
+        const actuals = getKpiActuals(inputs);
+
+        // KPI 5 Logic for text
+        const target5 = actuals.target5;
+
+        let html = "";
+
+        // KPI 1
+        html += kpiCard(
+          "kpi1",
+          "1. จำนวน Abandoned Call ต้องไม่เกิน 5%",
+          10,
+          scores.kpi1,
+          actuals.act1,
+          "% Abandoned",
+          `
+                <div>
+                    <label class="mini-label">จำนวนสายทั้งหมด</label>
+                    <input type="number" min="0" oninput="handleInput('kpi1_total', this.value)" value="${inputs.kpi1_total || ""}" class="form-control" placeholder="0">
+                </div>
+                <div>
+                    <label class="mini-label text-rose-600">สายหลุด (Abandoned)</label>
+                    <input type="number" min="0" oninput="handleInput('kpi1_abandoned', this.value)" value="${inputs.kpi1_abandoned || ""}" class="form-control" placeholder="0">
+                </div>
+            `,
+          "<= 5%",
+        );
+
+        // KPI 2
+        html += kpiCard(
+          "kpi2",
+          "2. จำนวน Unassigned ต้องไม่เกิน 10%",
+          10,
+          scores.kpi2,
+          actuals.act2,
+          "% Unassigned",
+          `
+                <div>
+                    <label class="mini-label">งานทั้งหมด</label>
+                    <input type="number" min="0" oninput="handleInput('kpi2_total', this.value)" value="${inputs.kpi2_total || ""}" class="form-control" placeholder="0">
+                </div>
+                <div>
+                    <label class="mini-label text-rose-600">จำนวน Unassigned</label>
+                    <input type="number" min="0" oninput="handleInput('kpi2_unassigned', this.value)" value="${inputs.kpi2_unassigned || ""}" class="form-control" placeholder="0">
+                </div>
+            `,
+          "<= 10%",
+        );
+
+        // KPI 3
+        html += kpiCard(
+          "kpi3",
+          "3. คะแนนความพึงพอใจของผู้ใช้บริการ มากกว่า หรือเท่ากับ 75 %",
+          20,
+          scores.kpi3,
+          actuals.act3,
+          "% Top Box",
+          `
+                <div>
+                    <label class="mini-label">ผู้ประเมินทั้งหมด</label>
+                    <input type="number" min="0" oninput="handleInput('kpi3_total', this.value)" value="${inputs.kpi3_total || ""}" class="form-control" placeholder="0">
+                </div>
+                <div>
+                    <label class="mini-label text-emerald-700">ได้ 4-5 คะแนน</label>
+                    <input type="number" min="0" oninput="handleInput('kpi3_topbox', this.value)" value="${inputs.kpi3_topbox || ""}" class="form-control" placeholder="0">
+                </div>
+            `,
+          ">= 75%",
+        );
+
+        // KPI 4
+        html += kpiCard(
+          "kpi4",
+          "4. ระบุปัญหาที่พบ สาเหตุ Status และปิดงานให้สมบูรณ์ 85%",
+          20,
+          scores.kpi4,
+          actuals.act4,
+          "% Closed",
+          `
+                <div>
+                    <label class="mini-label">ปัญหาทั้งหมด</label>
+                    <input type="number" min="0" oninput="handleInput('kpi4_total', this.value)" value="${inputs.kpi4_total || ""}" class="form-control" placeholder="0">
+                </div>
+                <div>
+                    <label class="mini-label text-emerald-700">ปิดงานสมบูรณ์</label>
+                    <input type="number" min="0" oninput="handleInput('kpi4_closed', this.value)" value="${inputs.kpi4_closed || ""}" class="form-control" placeholder="0">
+                </div>
+            `,
+          ">= 85%",
+        );
+
+        // KPI 5
+        html += kpiCard(
+          "kpi5",
+          "5. การรับงานทั้งหมดจะต้องไม่ต่ำกว่า 95%",
+          20,
+          scores.kpi5,
+          inputs.kpi5_accepted || 0,
+          "Accepted",
+          `
+                <div>
+                    <label class="mini-label flex items-center gap-1">งานทั้งหมดของทีม (Total)</label>
+                    <input type="number" min="0" oninput="handleInput('kpi5_total', this.value)" value="${inputs.kpi5_total || ""}" class="form-control" placeholder="ใส่จำนวนงานรวม">
+                </div>
+                <div>
+                    <label class="mini-label flex items-center gap-1 text-emerald-700">จำนวนงานที่พนักงานกดรับ</label>
+                    <input type="number" min="0" oninput="handleInput('kpi5_accepted', this.value)" value="${inputs.kpi5_accepted || ""}" class="form-control" placeholder="0">
+                </div>
+            `,
+          "ทำได้ตามค่าเฉลี่ย",
+          `เกณฑ์: งานทั้งหมด / 6 = ${target5} งาน/คน`,
+        );
+
+        container.innerHTML = html;
+      }
+
+      function updateSummary() {
+        const inputs = allData[selectedAgentId];
+        const scores = calculateScores(inputs);
+
+        // Update KPI 6 Display
+        document.getElementById("kpi6-score-display").innerText =
+          scores.kpi6.toFixed(2);
+
+        // Update Total and Grade
+        const totalDisplay = document.getElementById("total-score-display");
+        const gradeDisplay = document.getElementById("grade-display");
+        const gradeBadge = document.getElementById("grade-badge");
+        const scorePercentDisplay = document.getElementById(
+          "score-percent-display",
+        );
+        const totalProgressFill = document.getElementById(
+          "total-progress-fill",
+        );
+        const totalMeta = getScoreMeta(scores.total, 100);
+
+        totalDisplay.innerText = scores.total.toFixed(2);
+        totalDisplay.className = `text-5xl md:text-6xl font-black ${scores.textClass}`;
+
+        gradeDisplay.innerText = scores.level;
+        gradeBadge.className = `mt-4 rounded-xl border p-4 text-center ${scores.colorClass} ${scores.textClass}`;
+
+        if (scorePercentDisplay) {
+          scorePercentDisplay.innerText = `${Math.round(totalMeta.ratio)}%`;
+          scorePercentDisplay.style.color = totalMeta.color;
+        }
+
+        if (totalProgressFill) {
+          totalProgressFill.style.width = `${totalMeta.ratio}%`;
+          totalProgressFill.className = `progress-fill ${totalMeta.fillClass}`;
+        }
+      }
+
+      // --- Dashboard & Chart ---
+
+      function renderDashboard() {
+        const tableBody = document.getElementById("dashboard-table-body");
+        const chartContainer = document.getElementById("chart-container");
+        const statsContainer = document.getElementById("team-stats-container");
+
+        let tableHtml = "";
+        let chartHtml = "";
+
+        // Variables for Team Stats
+        let totalTeamScore = 0;
+        let topAgent = { name: "-", score: -1 };
+        let lowAgent = { name: "-", score: 101 };
+
+        agents.forEach((agent) => {
+          const inputs = allData[agent.id];
+          const scores = calculateScores(inputs);
+          const maxScore = 100;
+
+          // Track stats
+          totalTeamScore += scores.total;
+          if (scores.total > topAgent.score)
+            topAgent = { name: agent.nick, score: scores.total };
+          if (scores.total < lowAgent.score)
+            lowAgent = { name: agent.nick, score: scores.total };
+
+          // Calculate Actuals for Table (Detailed)
+          const act1 =
+            inputs.kpi1_total > 0
+              ? ((inputs.kpi1_abandoned / inputs.kpi1_total) * 100).toFixed(2) +
+                "%"
+              : "0.00%";
+          const act2 =
+            inputs.kpi2_total > 0
+              ? ((inputs.kpi2_unassigned / inputs.kpi2_total) * 100).toFixed(
+                  2,
+                ) + "%"
+              : "0.00%";
+          const act3 =
+            inputs.kpi3_total > 0
+              ? ((inputs.kpi3_topbox / inputs.kpi3_total) * 100).toFixed(2) +
+                "%"
+              : "0.00%";
+          const act4 =
+            inputs.kpi4_total > 0
+              ? ((inputs.kpi4_closed / inputs.kpi4_total) * 100).toFixed(2) +
+                "%"
+              : "0.00%";
+          const act5 =
+            inputs.kpi5_total > 0
+              ? `${inputs.kpi5_accepted}/${(inputs.kpi5_total / 6).toFixed(0)}`
+              : "0/0";
+
+          // Table Row
+          tableHtml += `
+                <tr class="border-b border-slate-100 transition-colors last:border-0 hover:bg-blue-50/40">
+                    <td class="whitespace-nowrap px-6 py-4 font-medium text-slate-900">
+                        <div class="flex flex-col">
+                            <span class="text-base font-black">${agent.nick}</span>
+                            <span class="text-xs text-gray-500">${agent.name}</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="text-gray-800 font-medium">${scores.kpi1.toFixed(1)}</div>
+                        <div class="text-[10px] text-gray-400 mt-1">(${act1})</div>
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="text-gray-800 font-medium">${scores.kpi2.toFixed(1)}</div>
+                        <div class="text-[10px] text-gray-400 mt-1">(${act2})</div>
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="text-gray-800 font-medium">${scores.kpi3.toFixed(1)}</div>
+                        <div class="text-[10px] text-gray-400 mt-1">(${act3})</div>
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="text-gray-800 font-medium">${scores.kpi4.toFixed(1)}</div>
+                        <div class="text-[10px] text-gray-400 mt-1">(${act4})</div>
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="text-gray-800 font-medium">${scores.kpi5.toFixed(1)}</div>
+                        <div class="text-[10px] text-gray-400 mt-1">(${act5})</div>
+                    </td>
+                    <td class="px-4 py-3 text-center bg-purple-50/30">
+                        <div class="text-purple-600 font-medium">${scores.kpi6.toFixed(1)}</div>
+                        <div class="text-[10px] text-purple-400 mt-1">Auto</div>
+                    </td>
+                    <td class="bg-slate-50 px-6 py-4 text-center">
+                        <span class="font-bold text-lg ${scores.textClass}">
+                            ${scores.total.toFixed(1)}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="rounded-full border px-2.5 py-1 text-xs font-black ${scores.colorClass} ${scores.textClass}">
+                            ${scores.level.split(" ")[0]}
+                        </span>
+                    </td>
+                </tr>`;
+
+          // Chart Column (Same as before)
+          chartHtml += `
+                <div class="group relative flex h-full min-w-[84px] flex-1 flex-col items-center justify-end">
+                    <!-- Tooltip -->
+                    <div class="pointer-events-none absolute bottom-full z-20 mb-3 rounded-xl bg-slate-900 p-3 text-xs text-white opacity-0 shadow-xl transition-opacity group-hover:opacity-100">
+                        <span class="font-bold text-sm block mb-1">${agent.nick} - Total: ${scores.total.toFixed(2)}</span>
+                        <div class="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px]">
+                            <span>KPI1: ${scores.kpi1.toFixed(1)}</span><span>KPI2: ${scores.kpi2.toFixed(1)}</span>
+                            <span>KPI3: ${scores.kpi3.toFixed(1)}</span><span>KPI4: ${scores.kpi4.toFixed(1)}</span>
+                            <span>KPI5: ${scores.kpi5.toFixed(1)}</span><span>KPI6: ${scores.kpi6.toFixed(1)}</span>
+                        </div>
+                        <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-800"></div>
+                    </div>
+                    
+                    <!-- Bar -->
+                    <div class="relative flex w-full max-w-[64px] flex-col justify-end overflow-hidden rounded-t-xl border border-slate-200 bg-white shadow-sm transition-all duration-300 group-hover:shadow-lg" style="height: 100%;">
+                        <div style="height: ${(scores.kpi6 / maxScore) * 100}%" class="bg-purple-400 w-full hover:bg-purple-500 transition-colors"></div>
+                        <div style="height: ${(scores.kpi5 / maxScore) * 100}%" class="bg-emerald-400 w-full hover:bg-emerald-500 transition-colors"></div>
+                        <div style="height: ${(scores.kpi4 / maxScore) * 100}%" class="bg-cyan-400 w-full hover:bg-cyan-500 transition-colors"></div>
+                        <div style="height: ${(scores.kpi3 / maxScore) * 100}%" class="bg-blue-400 w-full hover:bg-blue-500 transition-colors"></div>
+                        <div style="height: ${(scores.kpi2 / maxScore) * 100}%" class="bg-orange-400 w-full hover:bg-orange-500 transition-colors"></div>
+                        <div style="height: ${(scores.kpi1 / maxScore) * 100}%" class="bg-rose-400 w-full hover:bg-rose-500 transition-colors"></div>
+                    </div>
+                    
+                    <!-- Label -->
+                    <div class="mt-3 text-center">
+                        <span class="block text-xs font-black text-slate-700">${agent.nick}</span>
+                        <span class="mt-1 inline-block rounded-full border px-2 py-0.5 text-[10px] font-black ${scores.colorClass} ${scores.textClass}">
+                            ${scores.total.toFixed(0)}
+                        </span>
+                    </div>
+                </div>`;
+        });
+
+        // Render Team Stats
+        const avgScore = totalTeamScore / agents.length;
+        statsContainer.innerHTML = `
+                <div class="soft-card flex items-center justify-between rounded-2xl p-5">
+                    <div>
+                        <span class="text-xs font-black uppercase text-slate-500">คะแนนเฉลี่ยทีม</span>
+                        <div class="text-3xl font-black text-blue-600">${avgScore.toFixed(2)}</div>
+                    </div>
+                    <div class="rounded-xl bg-blue-50 p-3 text-blue-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                    </div>
+                </div>
+                <div class="soft-card flex items-center justify-between rounded-2xl p-5">
+                    <div>
+                        <span class="text-xs font-black uppercase text-slate-500">พนักงานดีเด่น (Top)</span>
+                        <div class="text-3xl font-black text-emerald-600">${topAgent.name}</div>
+                        <span class="text-xs font-bold text-emerald-600">${topAgent.score.toFixed(2)} คะแนน</span>
+                    </div>
+                    <div class="rounded-xl bg-emerald-50 p-3 text-emerald-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+                    </div>
+                </div>
+                <div class="soft-card flex items-center justify-between rounded-2xl p-5">
+                    <div>
+                        <span class="text-xs font-black uppercase text-slate-500">ต้องปรับปรุง (Low)</span>
+                        <div class="text-3xl font-black text-amber-600">${lowAgent.name}</div>
+                         <span class="text-xs font-bold text-amber-600">${lowAgent.score.toFixed(2)} คะแนน</span>
+                    </div>
+                    <div class="rounded-xl bg-amber-50 p-3 text-amber-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M3.4 20.3a1.7 1.7 0 0 1-2.4-2.4l15.3-15.3a1.7 1.7 0 0 1 2.4 2.4L3.4 20.3z"/></svg>
+                    </div>
+                </div>
+            `;
+
+        tableBody.innerHTML = tableHtml;
+        chartContainer.innerHTML = chartHtml;
+      }
+
+      // --- Export CSV ---
+      function exportCSV() {
+        const headers = [
+          "เบอร์",
+          "ชื่อ-นามสกุล",
+          "ชื่อเล่น",
+          "KPI 1 (Abandoned)",
+          "KPI 2 (Unassigned)",
+          "KPI 3 (CSAT)",
+          "KPI 4 (Closed)",
+          "KPI 5 (Accepted)",
+          "KPI 6 (จิตพิสัย)",
+          "คะแนนรวม",
+          "ระดับ (Grade)",
+        ];
+
+        const rows = agents.map((agent) => {
+          const scores = calculateScores(allData[agent.id]);
+          return [
+            agent.id,
+            `"${agent.name}"`,
+            agent.nick,
+            scores.kpi1.toFixed(2),
+            scores.kpi2.toFixed(2),
+            scores.kpi3.toFixed(2),
+            scores.kpi4.toFixed(2),
+            scores.kpi5.toFixed(2),
+            scores.kpi6.toFixed(2),
+            scores.total.toFixed(2),
+            scores.level,
+          ].join(",");
+        });
+
+        const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\n");
+        const blob = new Blob([csvContent], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute(
+          "download",
+          `KPI_Report_${new Date().toISOString().slice(0, 10)}.csv`,
+        );
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      // --- Export PDF ---
+      async function exportPDF() {
+        if (!window.jspdf || !window.html2canvas) {
+          alert("กำลังโหลดไลบรารี PDF... กรุณารอสักครู่");
+          return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const element = document.getElementById("view-dashboard");
+        const actions = document.getElementById("dashboard-actions");
+        const exportButton = actions?.querySelector(
+          'button[onclick="exportPDF()"]',
+        );
+
+        const originalDisplay = actions.style.display;
+        const originalBg = element.style.backgroundColor;
+        const originalPadding = element.style.padding;
+        const originalWidth = element.style.width;
+        const originalMaxWidth = element.style.maxWidth;
+        const originalButtonText = exportButton?.innerHTML;
+
+        actions.style.display = "none";
+        element.style.backgroundColor = "#ffffff";
+        element.style.padding = "20px";
+        element.style.width = "1240px";
+        element.style.maxWidth = "1240px";
+        if (exportButton) exportButton.innerHTML = "กำลังสร้าง PDF...";
+
+        try {
+          const canvas = await html2canvas(element, {
+            scale: Math.max(3, window.devicePixelRatio || 1),
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: "#ffffff",
+            logging: false,
+            windowWidth: 1440,
+            windowHeight: Math.max(element.scrollHeight + 80, 1200),
+          });
+
+          const pdf = new jsPDF("p", "mm", "a4");
+          const pdfWidth = 210;
+          const pdfHeight = 297;
+          const margin = 8;
+          const contentWidth = pdfWidth - margin * 2;
+          const contentHeight = pdfHeight - margin * 2;
+          const pxPerMm = canvas.width / contentWidth;
+          const pageHeightPx = Math.floor(contentHeight * pxPerMm);
+
+          let sourceY = 0;
+          let pageIndex = 0;
+
+          while (sourceY < canvas.height) {
+            const sliceHeight = Math.min(pageHeightPx, canvas.height - sourceY);
+            const pageCanvas = document.createElement("canvas");
+            pageCanvas.width = canvas.width;
+            pageCanvas.height = sliceHeight;
+
+            const context = pageCanvas.getContext("2d");
+            context.fillStyle = "#ffffff";
+            context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+            context.drawImage(
+              canvas,
+              0,
+              sourceY,
+              canvas.width,
+              sliceHeight,
+              0,
+              0,
+              canvas.width,
+              sliceHeight,
+            );
+
+            if (pageIndex > 0) pdf.addPage();
+
+            const pageData = pageCanvas.toDataURL("image/png");
+            const pageHeightMm = sliceHeight / pxPerMm;
+            pdf.addImage(
+              pageData,
+              "PNG",
+              margin,
+              margin,
+              contentWidth,
+              pageHeightMm,
+              undefined,
+              "FAST",
+            );
+
+            sourceY += sliceHeight;
+            pageIndex++;
+          }
+
+          pdf.save(`KPI_Report_${new Date().toISOString().slice(0, 10)}.pdf`);
+        } catch (error) {
+          console.error("PDF Export Error:", error);
+          alert("เกิดข้อผิดพลาดในการสร้าง PDF");
+        } finally {
+          // Restore visibility and style
+          actions.style.display = originalDisplay;
+          element.style.backgroundColor = originalBg;
+          element.style.padding = originalPadding;
+          element.style.width = originalWidth;
+          element.style.maxWidth = originalMaxWidth;
+          if (exportButton && originalButtonText) {
+            exportButton.innerHTML = originalButtonText;
+          }
+        }
+      }
+
+      // Start App
+      initData();
+      if (window.location.hash === "#dashboard") {
+        switchView("dashboard");
+      }
+    </script>
+  </body>
+</html>
